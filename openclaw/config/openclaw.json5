@@ -1,0 +1,125 @@
+{
+  // Keep defaults modest. Add model/provider auth only after first boot works.
+  agents: {
+    defaults: {
+      skipBootstrap: true,
+      contextInjection: "continuation-skip",
+      workspace: "/etc/openclaw/agents/scratch/workspace",
+    },
+    list: [
+      {
+        id: "scratch",
+        default: true,
+        name: "Scratch",
+        workspace: "/etc/openclaw/agents/scratch/workspace",
+        agentDir: "/var/lib/openclaw/agents/scratch/agent",
+      },
+      {
+        id: "carshare",
+        name: "Carshare",
+        workspace: "/etc/openclaw/agents/carshare/workspace",
+        agentDir: "/var/lib/openclaw/agents/carshare/agent",
+        tools: {
+          allow: ["exec", "read", "session_status"],
+          deny: ["write", "edit", "apply_patch", "browser", "canvas", "cron"],
+        },
+      },
+    ],
+  },
+
+  session: {
+    scope: "per-sender",
+    dmScope: "main",
+  },
+
+  tools: {
+    profile: "coding",
+    agentToAgent: {
+      enabled: false,
+      allow: ["scratch", "carshare"],
+    },
+  },
+
+  messages: {
+    groupChat: {
+      mentionPatterns: ["@openclaw", "@carshare"],
+    },
+  },
+
+  bindings: [
+    {
+      agentId: "carshare",
+      match: {
+        channel: "telegram",
+        accountId: "default",
+        peer: { kind: "group", id: "REPLACE_WITH_CARSHARE_GROUP_ID" },
+      },
+    },
+
+    // Fallback for direct chats and early testing.
+    { agentId: "scratch", match: { channel: "telegram", accountId: "default" } },
+    { agentId: "scratch", match: { channel: "discord", accountId: "default" } },
+    { agentId: "scratch", match: { channel: "whatsapp", accountId: "default" } },
+  ],
+
+  channels: {
+    telegram: {
+      enabled: false,
+      defaultAccount: "default",
+      accounts: {
+        default: {
+          enabled: false,
+          botToken: "replace-with-real-telegram-bot-token",
+          dmPolicy: "allowlist",
+          allowFrom: ["tg:REPLACE_WITH_YOUR_USER_ID"],
+          groups: {
+            "*": { requireMention: true },
+          },
+        },
+      },
+    },
+
+    discord: {
+      enabled: false,
+      defaultAccount: "default",
+      groupPolicy: "allowlist",
+      accounts: {
+        default: {
+          enabled: false,
+          token: "replace-with-real-discord-bot-token",
+          dmPolicy: "pairing",
+          guilds: {
+            "REPLACE_WITH_GUILD_ID": {
+              requireMention: true,
+              users: ["REPLACE_WITH_YOUR_USER_ID"],
+              channels: {
+                "REPLACE_WITH_CHANNEL_ID": {
+                  allow: true,
+                  requireMention: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+
+    whatsapp: {
+      // WhatsApp needs the plugin install and login flow first.
+      enabled: false,
+      defaultAccount: "default",
+      accounts: {
+        default: {
+          enabled: false,
+          dmPolicy: "allowlist",
+          allowFrom: ["+15551234567"],
+          groupPolicy: "allowlist",
+          groupAllowFrom: ["+15551234567"],
+          groups: {
+            "*": { requireMention: true },
+          },
+        },
+      },
+    },
+  },
+}

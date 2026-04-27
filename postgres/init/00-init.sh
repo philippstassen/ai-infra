@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<EOSQL
+DO
+\$\$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'role_openclaw') THEN
+    CREATE ROLE role_openclaw LOGIN PASSWORD '${ROLE_OPENCLAW_PASSWORD}';
+  ELSE
+    ALTER ROLE role_openclaw WITH LOGIN PASSWORD '${ROLE_OPENCLAW_PASSWORD}';
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'role_tooling') THEN
+    CREATE ROLE role_tooling LOGIN PASSWORD '${ROLE_TOOLING_PASSWORD}';
+  ELSE
+    ALTER ROLE role_tooling WITH LOGIN PASSWORD '${ROLE_TOOLING_PASSWORD}';
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'role_readonly') THEN
+    CREATE ROLE role_readonly LOGIN PASSWORD '${ROLE_READONLY_PASSWORD}';
+  ELSE
+    ALTER ROLE role_readonly WITH LOGIN PASSWORD '${ROLE_READONLY_PASSWORD}';
+  END IF;
+END
+\$\$;
+
+REVOKE ALL ON DATABASE "$POSTGRES_DB" FROM PUBLIC;
+
+GRANT CONNECT ON DATABASE "$POSTGRES_DB" TO role_openclaw;
+GRANT CONNECT ON DATABASE "$POSTGRES_DB" TO role_tooling;
+GRANT CONNECT ON DATABASE "$POSTGRES_DB" TO role_readonly;
+EOSQL

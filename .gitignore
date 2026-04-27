@@ -1,0 +1,8 @@
+.env
+infra/terraform.tfvars
+.terraform/
+*.tfstate
+*.tfstate.*
+backup/
+carshare/node_modules/
+*.pem

@@ -1,0 +1,28 @@
+#cloud-config
+package_update: true
+package_upgrade: true
+ssh_pwauth: false
+
+packages:
+  - build-essential
+  - ca-certificates
+  - curl
+  - docker.io
+  - docker-compose-v2
+  - git
+  - jq
+  - postgresql-client
+  - ufw
+  - unzip
+
+runcmd:
+  - [usermod, -aG, docker, ubuntu]
+  - [systemctl, enable, --now, docker]
+  - [loginctl, enable-linger, ubuntu]
+  - [ufw, default, deny, incoming]
+  - [ufw, default, allow, outgoing]
+  - [ufw, allow, OpenSSH]
+  - [ufw, --force, enable]
+  - [hostnamectl, set-hostname, openclaw]
+  - [mkdir, -p, /opt/ai-infra]
+  - [chown, -R, ubuntu:ubuntu, /opt/ai-infra]

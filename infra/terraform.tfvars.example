@@ -1,0 +1,21 @@
+tenancy_ocid     = "ocid1.tenancy.oc1..aaaaaaaawschci7oawqfwibgmdw7cuhjqkjcs7gbdwiv2xricaxf2354xjna"
+user_ocid        = "ocid1.user.oc1..aaaaaaaa6e2kbxfwflssy4frntalhzuzeyfyzh5gukvikimfkdsl4yktrf6q"
+fingerprint      = "1a:36:27:97:28:b8:4c:9a:dc:b4:5e:28:cf:fe:43:09"
+private_key_path = "~/.oci/oci_api_key.pem"
+region           = "eu-frankfurt-1"
+compartment_ocid = "ocid1.compartment.oc1..aaaaaaaavp622arlpbhp7wic2i2i3m5cfpdmsu6cuxbwfypin2fpu7znzvyq"
+
+# Leave null to use the first availability domain in the region.
+availability_domain = null
+
+ssh_public_key   = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOGwqyK6it4DFAZZIXpikT3/sO/N3/Hf+99dXs5qe+gA openclaw-oracle"
+ssh_allowed_cidr = "0.0.0.0/0"
+allow_tailscale_udp = false
+
+instance_display_name   = "openclaw-a1"
+vcn_cidr                = "10.42.0.0/16"
+subnet_cidr             = "10.42.1.0/24"
+shape                   = "VM.Standard.A1.Flex"
+ocpus                   = 4
+memory_in_gbs           = 24
+boot_volume_size_in_gbs = 200
