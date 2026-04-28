@@ -98,6 +98,33 @@ This is the right abstraction level here. A full plugin framework would be extra
 8. Run `docker compose up -d`.
 9. Tunnel the dashboard with `ssh -L 18789:127.0.0.1:18789 ubuntu@<ip>`.
 
+## Overnight A1 capacity retry
+
+Oracle Free Tier ARM capacity is often unavailable. If `terraform apply` fails with `Out of host capacity`, use the conservative retry wrapper:
+
+```bash
+scripts/retry-oci-a1.sh
+```
+
+The script runs one Terraform apply at a time, checks each availability domain once per round, waits 10 seconds between ADs, waits 2-5 minutes with jitter between rounds, backs off for one hour on `429` rate limits, and stops on non-capacity errors.
+
+Optional overrides:
+
+```bash
+RETRY_MAX_HOURS=12 \
+RETRY_AD_SLEEP_SECONDS=10 \
+RETRY_SLEEP_MIN_SECONDS=120 \
+RETRY_SLEEP_MAX_SECONDS=300 \
+scripts/retry-oci-a1.sh
+```
+
+If availability-domain auto-discovery fails, pass the exact AD names from OCI:
+
+```bash
+OCI_ADS="xxxx:EU-FRANKFURT-1-AD-1,xxxx:EU-FRANKFURT-1-AD-2,xxxx:EU-FRANKFURT-1-AD-3" \
+scripts/retry-oci-a1.sh
+```
+
 ## OpenClaw setup notes
 
 - `openclaw/config/openclaw.json5` is a scaffold, not a fully onboarded production config.
