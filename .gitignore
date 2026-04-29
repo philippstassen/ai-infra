@@ -6,3 +6,6 @@ infra/terraform.tfvars
 backup/
 carshare/node_modules/
 *.pem
+openclaw/config/**/*.bak
+openclaw/config/openclaw.json5.*
+openclaw/config/agents/**/workspace/state/

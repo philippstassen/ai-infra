@@ -1,5 +1,5 @@
 {
-   gateway: {
+  gateway: {
     mode: "local",
     auth: {
       mode: "token",
@@ -11,7 +11,7 @@
     defaults: {
       skipBootstrap: true,
       contextInjection: "continuation-skip",
-      workspace: "/etc/openclaw/agents/scratch/workspace",
+      workspace: "/var/lib/openclaw/agents/scratch/workspace",
       // Kimi/Qwen/GLM via the AWS Bedrock Mantle catalog.
       model: {
         primary: "amazon-bedrock-mantle/kimi-k2.5",
@@ -22,13 +22,13 @@
         id: "scratch",
         default: true,
         name: "Scratch",
-        workspace: "/etc/openclaw/agents/scratch/workspace",
+        workspace: "/var/lib/openclaw/agents/scratch/workspace",
         agentDir: "/var/lib/openclaw/agents/scratch/agent",
       },
       {
         id: "carshare",
         name: "Carshare",
-        workspace: "/etc/openclaw/agents/carshare/workspace",
+        workspace: "/var/lib/openclaw/agents/carshare/workspace",
         agentDir: "/var/lib/openclaw/agents/carshare/agent",
         tools: {
           allow: ["exec", "read", "session_status"],

@@ -47,17 +47,16 @@ services:
     env_file:
       - .env
     environment:
-      OPENCLAW_CONFIG_PATH: /etc/openclaw/openclaw.json5
+      OPENCLAW_CONFIG_PATH: /var/lib/openclaw/config/openclaw.json5
       OPENCLAW_STATE_DIR: /var/lib/openclaw
       CARSHARE_API_BASE_URL: ${CARSHARE_API_BASE_URL:-http://carshare:8080}
       CARSHARE_DEFAULT_PROJECT: ${CARSHARE_DEFAULT_PROJECT:-shared-car}
     volumes:
-      - ./openclaw/config:/etc/openclaw
-      - openclaw_state:/var/lib/openclaw
+      - ./openclaw/config:/etc/openclaw-src:ro
+      - /srv/openclaw/state:/var/lib/openclaw
     ports:
       - "127.0.0.1:18789:18789"
     command: ["openclaw", "gateway"]
 
 volumes:
   pgdata:
-  openclaw_state:

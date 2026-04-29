@@ -94,9 +94,10 @@ This is the right abstraction level here. A full plugin framework would be extra
 4. SSH to the VM as `ubuntu`.
 5. Clone this repo to `/opt/ai-infra`.
 6. Fill `.env` from `.env.example`.
-7. Run `docker compose build`.
-8. Run `docker compose up -d`.
-9. Tunnel the dashboard with `ssh -L 18789:127.0.0.1:18789 ubuntu@<ip>`.
+7. Create the OpenClaw runtime state directory with `sudo mkdir -p /srv/openclaw/state && sudo chown -R 1000:1000 /srv/openclaw/state`.
+8. Run `docker compose build`.
+9. Run `docker compose up -d`.
+10. Tunnel the dashboard with `ssh -L 18789:127.0.0.1:18789 ubuntu@<ip>`.
 
 ## Overnight A1 capacity retry
 
@@ -127,7 +128,10 @@ scripts/retry-oci-a1.sh
 
 ## OpenClaw setup notes
 
-- `openclaw/config/openclaw.json5` is a scaffold, not a fully onboarded production config.
+- `openclaw/config/openclaw.json5` is the git-tracked source config.
+- The running container copies that source config into `/var/lib/openclaw/config/openclaw.json5` before startup.
+- Mutable OpenClaw state lives on the host at `/srv/openclaw/state`, mounted as `/var/lib/openclaw` in the container.
+- Do not edit OpenClaw config on the server as the source of truth. Edit locally, push, pull on the server, and restart.
 - Telegram is the intended first channel.
 - The `carshare` agent should be bound to one specific Telegram group once you know the group ID.
 - WhatsApp is left as scaffolded config because the plugin install and login flow is interactive.
@@ -143,12 +147,12 @@ Good sequence:
 ## Telegram-first setup
 
 1. Create a bot in `@BotFather`.
-2. Put the token into `openclaw/config/openclaw.json5`.
-3. Replace `tg:REPLACE_WITH_YOUR_USER_ID` with your Telegram numeric user ID.
+2. Put the token into `.env` as `TELEGRAM_BOT_TOKEN`.
+3. Put your numeric Telegram user ID into `.env` as `TELEGRAM_USER_ID`.
 4. Start the stack and message the bot directly first.
 5. Add the bot to the car-sharing group.
 6. Find the group ID from OpenClaw logs or Telegram API updates.
-7. Replace `REPLACE_WITH_CARSHARE_GROUP_ID` in the `carshare` binding.
+7. Put the group ID into `.env` as `TELEGRAM_CARSHARE_GROUP_ID`.
 8. Restart the OpenClaw container.
 
 At that point, direct chats go to `scratch`, while the car-sharing group goes to `carshare`.
