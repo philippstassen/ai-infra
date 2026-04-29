@@ -1,6 +1,7 @@
 {
   gateway: {
     mode: "local",
+    bind: "lan",
     auth: {
       mode: "token",
       token: "${OPENCLAW_GATEWAY_TOKEN}",
@@ -105,7 +106,7 @@
               users: ["REPLACE_WITH_YOUR_USER_ID"],
               channels: {
                 "REPLACE_WITH_CHANNEL_ID": {
-                  allow: true,
+                  enabled: true,
                   requireMention: true,
                 },
               },
@@ -137,6 +138,7 @@
   plugins: {
     entries: {
       "amazon-bedrock": {
+        enabled: true,
         config: {
           discovery: {
             enabled: true,
@@ -146,12 +148,7 @@
         },
       },
       "amazon-bedrock-mantle": {
-        config: {
-          discovery: {
-            enabled: true,
-            region: "${AWS_REGION}",
-          },
-        },
+        enabled: true,
       },
     },
   },
