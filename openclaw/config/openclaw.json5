@@ -9,43 +9,6 @@
   },
   models: {
     providers: {
-      // AWS recommends the bedrock-mantle endpoint for Kimi/Qwen/GLM when possible.
-      // Keep these explicit so OpenClaw is not blocked by /v1/models discovery.
-      "amazon-bedrock-mantle": {
-        baseUrl: "https://bedrock-mantle.${AWS_REGION}.api.aws/v1",
-        api: "openai-completions",
-        auth: "api-key",
-        apiKey: "env:AWS_BEARER_TOKEN_BEDROCK",
-        models: [
-          {
-            id: "moonshotai.kimi-k2.5",
-            name: "Kimi K2.5",
-            reasoning: false,
-            input: ["text", "image"],
-            cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-            contextWindow: 256000,
-            maxTokens: 16000,
-          },
-          {
-            id: "qwen.qwen3-coder-next",
-            name: "Qwen3 Coder Next",
-            reasoning: false,
-            input: ["text"],
-            cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-            contextWindow: 256000,
-            maxTokens: 16000,
-          },
-          {
-            id: "zai.glm-4.7",
-            name: "GLM 4.7",
-            reasoning: false,
-            input: ["text"],
-            cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-            contextWindow: 203000,
-            maxTokens: 4000,
-          },
-        ],
-      },
       "amazon-bedrock": {
         baseUrl: "https://bedrock-runtime.${AWS_REGION}.amazonaws.com",
         api: "bedrock-converse-stream",
@@ -56,15 +19,6 @@
             name: "Kimi K2.5",
             reasoning: false,
             input: ["text", "image"],
-            cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-            contextWindow: 256000,
-            maxTokens: 16000,
-          },
-          {
-            id: "qwen.qwen3-coder-next",
-            name: "Qwen3 Coder Next",
-            reasoning: false,
-            input: ["text"],
             cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
             contextWindow: 256000,
             maxTokens: 16000,
@@ -88,9 +42,10 @@
       skipBootstrap: true,
       contextInjection: "continuation-skip",
       workspace: "/var/lib/openclaw/agents/scratch/workspace",
-      // Kimi/Qwen/GLM via the AWS Bedrock Mantle catalog.
+      // Kimi via native AWS Bedrock Converse. OpenClaw 2026.4.x sees no text
+      // output from the Mantle streaming path for these models.
       model: {
-        primary: "amazon-bedrock-mantle/moonshotai.kimi-k2.5",
+        primary: "amazon-bedrock/moonshotai.kimi-k2.5",
       },
     },
     list: [
@@ -218,12 +173,12 @@
           discovery: {
             enabled: true,
             region: "${AWS_REGION}",
-            providerFilter: ["anthropic", "amazon", "moonshotai", "qwen", "zai"],
+            providerFilter: ["anthropic", "amazon", "moonshotai", "zai"],
           },
         },
       },
       "amazon-bedrock-mantle": {
-        enabled: true,
+        enabled: false,
       },
     },
   },
