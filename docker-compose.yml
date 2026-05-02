@@ -24,7 +24,7 @@ services:
       - .env
     environment:
       PORT: ${CARSHARE_API_PORT:-8080}
-      DATABASE_URL: postgres://role_tooling:${ROLE_TOOLING_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      DATABASE_URL: postgres://role_tooling:${ROLE_TOOLING_PASSWORD:-change-me-too}@postgres:5432/${POSTGRES_DB}
       CARSHARE_DEFAULT_PROJECT: ${CARSHARE_DEFAULT_PROJECT:-shared-car}
       CARSHARE_PROJECT_NAME: ${CARSHARE_PROJECT_NAME:-Shared Car}
       CARSHARE_CURRENCY: ${CARSHARE_CURRENCY:-EUR}
@@ -33,6 +33,7 @@ services:
       test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:' + (process.env.PORT || 8080) + '/health').then(r => { if (!r.ok) process.exit(1) }).catch(() => process.exit(1))\""]
       interval: 10s
       timeout: 5s
+      start_period: 10s
       retries: 5
 
   agent-runtime:
@@ -61,6 +62,7 @@ services:
       test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:' + (process.env.PORT || 3000) + '/health').then(r => { if (!r.ok) process.exit(1) }).catch(() => process.exit(1))\""]
       interval: 10s
       timeout: 5s
+      start_period: 10s
       retries: 5
 
 volumes:

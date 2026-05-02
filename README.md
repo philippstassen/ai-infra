@@ -102,32 +102,25 @@ curl -s http://127.0.0.1:${AGENT_RUNTIME_PORT:-19080}/messages \
 
 ## Existing Server Cutover
 
-If an older checkout had an OpenClaw container, it can be removed without backup if it never held useful state.
+If an older checkout had an OpenClaw container and you do not need any existing Postgres data, use a clean volume reset. This is also the right recovery path after a failed first boot, because Postgres init scripts only run when the data directory is empty.
 
 On the server after pulling this repo:
 
 ```bash
 cd /opt/ai-infra
-docker compose down --remove-orphans
+docker compose down --volumes --remove-orphans
 docker compose build postgres carshare agent-runtime
 docker compose up -d postgres carshare agent-runtime
 docker compose ps
 ```
 
-If keeping an existing Postgres volume, apply the runtime migration once:
+If keeping an existing Postgres volume instead, apply the runtime migration once:
 
 ```bash
 docker compose exec -T postgres psql \
   -U "$POSTGRES_USER" \
   -d "$POSTGRES_DB" \
   -f /dev/stdin < postgres/migrations/001-runtime-schema.sql
-```
-
-If you want a completely clean database and do not need any existing Carshare data, remove the Compose volume before starting:
-
-```bash
-docker compose down --volumes --remove-orphans
-docker compose up -d --build
 ```
 
 The old host directory `/srv/openclaw/state` can be deleted manually on the server if it exists and has no useful data.
@@ -155,6 +148,32 @@ AGENT_RUNTIME_TELEGRAM_ENABLED=true
 ```
 
 Keep `AGENT_RUNTIME_TELEGRAM_ENABLED=false` until direct HTTP health and message smoke tests pass.
+
+### Updating Server Env
+
+Keep real secrets in local `.env` and the server `/opt/ai-infra/.env`; do not commit them. The helper script reads connection details from the gitignored `.deploy.env` file.
+
+First-time local setup:
+
+```bash
+cp .deploy.env.example .deploy.env
+```
+
+Update the server env:
+
+```bash
+scripts/update-env.sh
+```
+
+Update and recreate services:
+
+```bash
+scripts/update-env.sh --restart
+```
+
+The script copies `.env` over SSH/SCP, installs it as `/opt/ai-infra/.env` with mode `600`, and runs `docker compose config --quiet` remotely.
+
+`--restart` recreates `carshare` and `agent-runtime`. If you change Postgres database names or role passwords for an existing volume, reset the volume or update the database roles manually; Postgres init scripts only run on an empty data directory.
 
 ## Telegram Setup
 

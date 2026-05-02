@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+: "${ROLE_TOOLING_PASSWORD:=change-me-too}"
+: "${ROLE_RUNTIME_PASSWORD:=change-me-too}"
+: "${ROLE_READONLY_PASSWORD:=change-me-too}"
+
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<EOSQL
 DO
 \$\$
