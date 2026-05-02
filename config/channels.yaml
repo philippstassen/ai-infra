@@ -1,0 +1,11 @@
+channels:
+  telegram:
+    enabled: true
+    account: default
+    token_env: TELEGRAM_BOT_TOKEN
+    allow_from:
+      - env:TELEGRAM_USER_ID
+  discord:
+    enabled: false
+    account: default
+    token_env: DISCORD_BOT_TOKEN

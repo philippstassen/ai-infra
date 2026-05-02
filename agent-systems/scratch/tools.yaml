@@ -1,0 +1,4 @@
+tools:
+  - id: model.chat
+    description: Generate a normal assistant reply through the selected model.
+    side_effects: none

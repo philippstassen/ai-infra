@@ -1,0 +1,12 @@
+id: scratch
+name: Scratch
+description: General-purpose safe testing system for direct chats and early channel validation.
+default_model: bedrock-kimi
+entry_graph: graph.yaml
+session_scope: sender
+memory_policy:
+  long_term_memory: disabled
+permissions:
+  tools:
+    - model.chat
+  resources: []

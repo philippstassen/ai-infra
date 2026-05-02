@@ -35,9 +35,10 @@ services:
       timeout: 5s
       retries: 5
 
-  openclaw:
+  agent-runtime:
     build:
-      context: ./openclaw
+      context: .
+      dockerfile: ./runtime/Dockerfile
     restart: unless-stopped
     depends_on:
       postgres:
@@ -47,16 +48,20 @@ services:
     env_file:
       - .env
     environment:
-      OPENCLAW_CONFIG_PATH: /var/lib/openclaw/config/openclaw.json5
-      OPENCLAW_STATE_DIR: /var/lib/openclaw
-      CARSHARE_API_BASE_URL: ${CARSHARE_API_BASE_URL:-http://carshare:8080}
-      CARSHARE_DEFAULT_PROJECT: ${CARSHARE_DEFAULT_PROJECT:-shared-car}
-    volumes:
-      - ./openclaw/config:/etc/openclaw-src:ro
-      - /srv/openclaw/state:/var/lib/openclaw
+      PORT: 3000
+      DATABASE_URL: postgres://role_runtime:${ROLE_RUNTIME_PASSWORD:-change-me-too}@postgres:5432/${POSTGRES_DB}
+      CARSHARE_API_BASE_URL: http://carshare:8080
+      CARSHARE_PROJECT_SLUG: ${CARSHARE_DEFAULT_PROJECT:-shared-car}
+      AGENT_RUNTIME_TELEGRAM_ENABLED: ${AGENT_RUNTIME_TELEGRAM_ENABLED:-false}
+      AGENT_RUNTIME_ALLOW_IN_MEMORY_STORE: "false"
+      AGENT_RUNTIME_DEFAULT_MODEL_ID: ${AGENT_RUNTIME_DEFAULT_MODEL_ID:-moonshotai.kimi-k2.5}
     ports:
-      - "127.0.0.1:18789:18789"
-    command: ["openclaw", "gateway"]
+      - "127.0.0.1:${AGENT_RUNTIME_PORT:-19080}:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:' + (process.env.PORT || 3000) + '/health').then(r => { if (!r.ok) process.exit(1) }).catch(() => process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   pgdata:

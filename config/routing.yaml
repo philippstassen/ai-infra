@@ -1,0 +1,11 @@
+bindings:
+  - id: telegram-direct-scratch
+    channel: telegram
+    peer_kind: dm
+    peer_id: env:TELEGRAM_USER_ID
+    system: scratch
+  - id: telegram-carshare-group
+    channel: telegram
+    peer_kind: group
+    peer_id: env:TELEGRAM_CARSHARE_GROUP_ID
+    system: carshare

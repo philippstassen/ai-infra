@@ -23,6 +23,6 @@ runcmd:
   - [ufw, default, allow, outgoing]
   - [ufw, allow, OpenSSH]
   - [ufw, --force, enable]
-  - [hostnamectl, set-hostname, openclaw]
+  - [hostnamectl, set-hostname, ai-infra]
   - [mkdir, -p, /opt/ai-infra]
   - [chown, -R, ubuntu:ubuntu, /opt/ai-infra]

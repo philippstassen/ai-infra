@@ -12,7 +12,7 @@ ssh_public_key   = "insert_public_key"
 ssh_allowed_cidr = "0.0.0.0/0"
 allow_tailscale_udp = false
 
-instance_display_name   = "openclaw-a1"
+instance_display_name   = "ai-infra-a1"
 vcn_cidr                = "10.42.0.0/16"
 subnet_cidr             = "10.42.1.0/24"
 shape                   = "VM.Standard.A1.Flex"

@@ -1,0 +1,16 @@
+tools:
+  - id: carshare.ensure_project
+    description: Ensure the shared-car project exists before recording events.
+    side_effects: writes_domain_data
+  - id: carshare.record_handover
+    description: Record a handover with holder and remaining liters.
+    side_effects: writes_domain_data
+  - id: carshare.record_refill
+    description: Record a refill with payer, liters, and total cost.
+    side_effects: writes_domain_data
+  - id: carshare.summary
+    description: Read current fuel ledger summary.
+    side_effects: none
+  - id: carshare.events
+    description: Read recent carshare ledger events.
+    side_effects: none

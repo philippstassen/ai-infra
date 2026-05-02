@@ -1,0 +1,55 @@
+# Implementation Contract: Agent Runtime App
+
+Readiness: Ready with caveats
+
+## Boundary
+
+The Agent Runtime App is the deployable application container for starter DIY runtime logic: channel adapters, message normalization, routing, session management, local agent-system loading, synchronous per-message LangGraph graph execution, LangChain node hosting, permissions, tool/model clients, and runtime persistence.
+
+## Module Boundaries
+
+- Channel adapters normalize Telegram and Discord events and send channel responses.
+- Router/session modules select an agent system and manage runtime session state.
+- Graph execution modules load `agent-systems/scratch/graph.yaml` and `agent-systems/carshare/graph.yaml` and run configured nodes synchronously per message.
+- Client modules isolate calls to Carshare Service, direct AWS Bedrock model providers, and the Postgres runtime schema.
+- Permission modules enforce starter tool allowlists and side-effect classes, especially carshare domain writes.
+
+## Allowed Dependencies
+
+- Agent Runtime App may call Carshare Service over HTTP/JSON.
+- Agent Runtime App may access Postgres runtime schemas for channel bindings, sessions, messages, runs, and tool invocation audit.
+- Agent Runtime App may call AWS Bedrock model providers through configured clients.
+- Agent Runtime App may call a model gateway only after a future ADR introduces it as a deployment dependency.
+- Carshare Service may access its carshare schema in Postgres.
+
+## Forbidden Dependencies
+
+- Agent graph nodes must not write GitHub in the starter scope.
+- Agent Runtime App must not directly write carshare domain tables except migrations or administrative bootstrap.
+- Runtime flows must not create implicit long-term memory writes.
+- Agents and agent systems must not become separate deployable containers without a new ADR.
+- Agent Runtime App must not depend on a Carshare MCP server in the initial architecture; Carshare integration uses HTTP/JSON.
+- Initial implementation must not require LiteLLM, Bifrost, or another model gateway.
+- Initial implementation must not require checkpoint/resume, approval interrupts, artifact storage, or knowledge promotion.
+
+## Contract Sources
+
+- Carshare HTTP and data contract source: `architecture/contracts/carshare-service-http.md`, `carshare/src/server.js`, and `postgres/init/10-schema.sql`.
+- Agent graph contract source: `architecture/contracts/agent-graph-schema-v1.md`, `agent-systems/scratch/graph.yaml`, and `agent-systems/carshare/graph.yaml`.
+- Runtime DB contract source: `architecture/contracts/runtime-db-schema-v1.md`; future migrations must implement or intentionally revise it.
+- Model provider contract source: `config/models.yaml` and ADR-0002; initial integration is direct AWS Bedrock, preferably using Bedrock/Mantle-compatible clients if viable.
+
+## Fitness Criteria
+
+- Structurizr DSL validates.
+- Agent graph configuration tests cover schema conformance, graph loading, graph selection, and synchronous per-message execution when runtime code exists.
+- API/contract tests cover the Agent Runtime App client for documented Carshare Service HTTP endpoints.
+- Permission tests prove starter carshare write tools use the configured side-effect class and no GitHub write path exists.
+- Migration tests prove runtime and carshare data ownership boundaries are preserved.
+
+## Caveats
+
+- Proposed contracts need implementation tests.
+- Runtime code and migrations are not yet built/applied.
+- Direct Bedrock client details and Bedrock/Mantle compatibility require implementation verification.
+- No checkpoint/resume, artifact storage, knowledge promotion, or repo-maintenance/GitHub write flow is part of the starter implementation.

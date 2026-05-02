@@ -1,21 +1,22 @@
 # AI Infra
 
-Minimal Oracle Free Tier structure for a self-hosted OpenClaw gateway, a shared Postgres data layer, and task-specific agents with version-controlled tooling.
+Small Oracle Free Tier stack for a self-hosted Agent Runtime App, shared Postgres data layer, and task-specific agent systems with version-controlled behavior.
 
 ## What this is
 
 - Terraform for a single Oracle ARM VM.
-- Docker Compose for OpenClaw and Postgres.
-- Version-controlled agent workspaces under `openclaw/config/agents/`.
-- A shared Postgres layer for future custom tools and agent data.
-- One concrete custom tool path: a `carshare` service and CLI for the shared-car use case.
+- Docker Compose for Agent Runtime App, Carshare Service, and Postgres.
+- Version-controlled agent systems under `agent-systems/`.
+- Cross-system routing, model, resource, and permission config under `config/`.
+- One concrete custom domain service: `carshare` for the shared-car fuel ledger.
 
 ## What this is not
 
 - Not Kubernetes.
-- Not Snowflake.
-- Not a fully abstract platform before you have real workloads.
-- Not a promise that OpenClaw itself should store everything in Postgres.
+- Not a model gateway deployment.
+- Not a checkpoint/resume platform.
+- Not a durable-memory or artifact-management system.
+- Not a general plugin framework before there are enough workloads to justify one.
 
 The point is to keep the setup small, inspectable, and easy to rebuild.
 
@@ -25,68 +26,69 @@ The point is to keep the setup small, inspectable, and easy to rebuild.
 .
 ├── .env.example
 ├── docker-compose.yml
-├── carshare/
+├── architecture/                  # Structurizr/C4, ADRs, rules, contracts
+├── agent-systems/                 # Git-versioned agent system definitions
+│   ├── scratch/
+│   └── carshare/
+├── config/                        # Routing, models, resources, permissions
+├── runtime/                       # Agent Runtime App
 │   ├── Dockerfile
 │   ├── package.json
 │   └── src/
-├── infra/
-│   ├── cloud-init.yaml
-│   ├── main.tf
-│   ├── outputs.tf
-│   ├── terraform.tfvars.example
-│   ├── variables.tf
-│   └── versions.tf
-├── openclaw/
-│   ├── Dockerfile
-│   └── config/
-│       ├── agents/
-│       ├── openclaw.json5
-│       └── skills/
+├── carshare/                      # Carshare HTTP domain service
 ├── postgres/
-│   └── init/
-│       ├── 00-init.sh
-│       └── 10-schema.sql
+│   ├── init/                      # Fresh DB bootstrap
+│   └── migrations/                # Existing DB migrations
+├── infra/                         # Oracle VM Terraform
 └── scripts/
-    └── backup.sh
 ```
 
-## Design choices
+Directory ownership rules:
 
-### Oracle
+- `agent-systems/` contains versioned behavior: workflow metadata, graph shape, prompts, tool declarations, and resource policies.
+- `runtime/` contains generic execution code. It should not contain carshare-specific prompts or hidden runtime state.
+- `config/` contains cross-system routing and policy. It must not contain secrets.
+- `postgres/migrations/` contains explicit schema evolution for existing databases.
+- Runtime artifacts are not a starter architecture concern; add storage only if future workflows need generated files, diffs, or reports.
+- Long-term memory and knowledge promotion are not in the starter runtime; any durable memory requires a future ADR with explicit provenance.
 
-- One `VM.Standard.A1.Flex` VM.
-- Only SSH is opened by default.
-- No public database.
-- No public OpenClaw dashboard.
+## Services
 
-This is the simplest setup that still rebuilds cleanly.
+### Agent Runtime App
 
-### OpenClaw
+- Compose service: `agent-runtime`.
+- Private HTTP API: `127.0.0.1:${AGENT_RUNTIME_PORT:-19080}`.
+- Health endpoint: `GET /health`.
+- Direct test endpoint: `POST /messages`.
+- Optional Telegram polling controlled by `AGENT_RUNTIME_TELEGRAM_ENABLED`.
+- Loads local graph, prompt, tool, routing, model, resource, and permission config from the repo checkout.
+- Persists channel bindings, sessions, messages, runs, and tool invocation audit to the `runtime` Postgres schema.
+- Calls AWS Bedrock directly; no LiteLLM/Bifrost/model-gateway deployment is part of the starter stack.
+- Calls Carshare Service over HTTP/JSON; it does not directly write `carshare.*` tables during normal operation.
 
-- One `scratch` agent exists for safe early testing.
-- One `carshare` agent exists for a real task-specific workflow.
-- The `carshare` agent is meant to be bound to one specific chat, not used as a general assistant.
+Direct local smoke request:
 
-This is closer to the actual value of multi-agent setups: separate durable contexts for separate jobs.
+```bash
+curl -s http://127.0.0.1:${AGENT_RUNTIME_PORT:-19080}/messages \
+  -H 'content-type: application/json' \
+  -d '{"channel":"direct","channelChatId":"test","agentSystemId":"scratch","message":{"id":"local-1","text":"hello"}}'
+```
 
-### Data layer
+### Carshare Service
 
-- Postgres is included from day 1.
-- `pgvector` is available, but no embedding pipeline is forced yet.
-- Schemas are split into `openclaw`, `agent_data`, and `shared`.
-- Roles are split into `role_openclaw`, `role_tooling`, and `role_readonly`.
+- Compose service: `carshare`.
+- Owns the `carshare` Postgres schema.
+- Exposes HTTP/JSON endpoints for project ensure, handover, refill, recent events, and summary.
+- The `carshare` agent system parses chat messages and writes durable domain facts only through this service.
 
-This gives you a clean shared data plane for future tools without overbuilding a warehouse.
+### Postgres
 
-### Custom tooling
+- Compose service: `postgres`.
+- Uses `pgvector/pgvector:pg16` so vector support is available later, but no embedding pipeline is forced now.
+- Fresh bootstrap creates active schemas: `shared`, `carshare`, and `runtime`.
+- Active roles: `role_tooling`, `role_runtime`, and `role_readonly`.
 
-- `carshare` is a small HTTP service plus CLI wrapper.
-- OpenClaw can use it through a skill with the normal `exec` tool.
-- The agent still interprets unstructured chat, but the records and balances live in Postgres.
-
-This is the right abstraction level here. A full plugin framework would be extra overhead too early.
-
-## First bring-up
+## First Bring-Up
 
 1. Fill `infra/terraform.tfvars` from `infra/terraform.tfvars.example`.
 2. Run `terraform -chdir=infra init`.
@@ -94,72 +96,80 @@ This is the right abstraction level here. A full plugin framework would be extra
 4. SSH to the VM as `ubuntu`.
 5. Clone this repo to `/opt/ai-infra`.
 6. Fill `.env` from `.env.example`.
-7. Create the OpenClaw runtime state directory with `sudo mkdir -p /srv/openclaw/state && sudo chown -R 1000:1000 /srv/openclaw/state`.
-8. Run `docker compose build`.
-9. Run `docker compose up -d`.
-10. Tunnel the dashboard with `ssh -L 18789:127.0.0.1:18789 ubuntu@<ip>`.
+7. Run `docker compose build`.
+8. Run `docker compose up -d`.
+9. Check services with `docker compose ps`.
 
-## Overnight A1 capacity retry
+## Existing Server Cutover
 
-Oracle Free Tier ARM capacity is often unavailable. If `terraform apply` fails with `Out of host capacity`, use the conservative retry wrapper:
+If an older checkout had an OpenClaw container, it can be removed without backup if it never held useful state.
 
-```bash
-scripts/retry-oci-a1.sh
-```
-
-The script runs one Terraform apply at a time, checks each availability domain once per round, waits 10 seconds between ADs, waits 2-5 minutes with jitter between rounds, backs off for one hour on `429` rate limits, and stops on non-capacity errors.
-
-Optional overrides:
+On the server after pulling this repo:
 
 ```bash
-RETRY_MAX_HOURS=12 \
-RETRY_AD_SLEEP_SECONDS=10 \
-RETRY_SLEEP_MIN_SECONDS=120 \
-RETRY_SLEEP_MAX_SECONDS=300 \
-scripts/retry-oci-a1.sh
+cd /opt/ai-infra
+docker compose down --remove-orphans
+docker compose build postgres carshare agent-runtime
+docker compose up -d postgres carshare agent-runtime
+docker compose ps
 ```
 
-If availability-domain auto-discovery fails, pass the exact AD names from OCI:
+If keeping an existing Postgres volume, apply the runtime migration once:
 
 ```bash
-OCI_ADS="xxxx:EU-FRANKFURT-1-AD-1,xxxx:EU-FRANKFURT-1-AD-2,xxxx:EU-FRANKFURT-1-AD-3" \
-scripts/retry-oci-a1.sh
+docker compose exec -T postgres psql \
+  -U "$POSTGRES_USER" \
+  -d "$POSTGRES_DB" \
+  -f /dev/stdin < postgres/migrations/001-runtime-schema.sql
 ```
 
-## OpenClaw setup notes
+If you want a completely clean database and do not need any existing Carshare data, remove the Compose volume before starting:
 
-- `openclaw/config/openclaw.json5` is the git-tracked source config.
-- The running container copies that source config into `/var/lib/openclaw/config/openclaw.json5` before startup.
-- Mutable OpenClaw state lives on the host at `/srv/openclaw/state`, mounted as `/var/lib/openclaw` in the container.
-- Do not edit OpenClaw config on the server as the source of truth. Edit locally, push, pull on the server, and restart.
-- Telegram is the intended first channel.
-- The `carshare` agent should be bound to one specific Telegram group once you know the group ID.
-- WhatsApp is left as scaffolded config because the plugin install and login flow is interactive.
+```bash
+docker compose down --volumes --remove-orphans
+docker compose up -d --build
+```
 
-Good sequence:
+The old host directory `/srv/openclaw/state` can be deleted manually on the server if it exists and has no useful data.
 
-1. Start with Telegram.
-2. Confirm the dashboard works over SSH tunnel.
-3. Bind the car-sharing group to the `carshare` agent.
-4. Add WhatsApp only after the first channel is stable.
-5. Add more agents only when they need genuinely separate workspaces or identities.
+## Runtime Env
 
-## Telegram-first setup
+Required operational values in `.env`:
+
+```env
+POSTGRES_DB=ai_infra
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=...
+ROLE_TOOLING_PASSWORD=...
+ROLE_RUNTIME_PASSWORD=...
+ROLE_READONLY_PASSWORD=...
+
+AWS_REGION=eu-north-1
+AWS_DEFAULT_REGION=eu-north-1
+AWS_BEARER_TOKEN_BEDROCK=...
+
+TELEGRAM_BOT_TOKEN=...
+TELEGRAM_USER_ID=...
+TELEGRAM_CARSHARE_GROUP_ID=...
+AGENT_RUNTIME_TELEGRAM_ENABLED=true
+```
+
+Keep `AGENT_RUNTIME_TELEGRAM_ENABLED=false` until direct HTTP health and message smoke tests pass.
+
+## Telegram Setup
 
 1. Create a bot in `@BotFather`.
 2. Put the token into `.env` as `TELEGRAM_BOT_TOKEN`.
 3. Put your numeric Telegram user ID into `.env` as `TELEGRAM_USER_ID`.
-4. Start the stack and message the bot directly first.
+4. Start the stack and test direct HTTP first.
 5. Add the bot to the car-sharing group.
-6. Find the group ID from OpenClaw logs or Telegram API updates.
-7. Put the group ID into `.env` as `TELEGRAM_CARSHARE_GROUP_ID`.
-8. Restart the OpenClaw container.
+6. Put the group ID into `.env` as `TELEGRAM_CARSHARE_GROUP_ID`.
+7. Set `AGENT_RUNTIME_TELEGRAM_ENABLED=true`.
+8. Restart the runtime with `docker compose up -d --force-recreate agent-runtime`.
 
-At that point, direct chats go to `scratch`, while the car-sharing group goes to `carshare`.
+Direct chats route to `scratch`; the configured car-sharing group routes to `carshare`.
 
-## Carshare workflow
-
-The intended workflow is deliberately simple.
+## Carshare Workflow
 
 Example messages in the bound group:
 
@@ -168,23 +178,22 @@ Example messages in the bound group:
 - `tank is at 17l, your turn now`
 - `what is the current balance?`
 
-The `carshare` agent should:
+The `carshare` agent should parse the message, store a structured event through Carshare Service when fields are complete, ask one clarification question when fields are missing, and answer summary questions from the same ledger.
 
-- parse the unstructured message,
-- store a structured event through `carshare-tool`,
-- report the updated state when useful,
-- answer summary questions from the same ledger.
+## Verification
 
-Important limitation:
+Because the local host may not have Node installed, run runtime tests in Docker:
 
-- the running balance is relative to the starting tank state.
-- if the tank level is very different from when you started tracking, some value is still sitting in the tank and is not yet fully settled between people.
+```bash
+docker run --rm -v "$PWD:/workspace:ro" -w /tmp node:24-bookworm-slim sh -lc \
+  "cp -a /workspace/runtime /tmp/runtime && cp -a /workspace/config /tmp/config && cp -a /workspace/agent-systems /tmp/agent-systems && cp -a /workspace/postgres /tmp/postgres && cd /tmp/runtime && npm ci && npm test"
+docker compose config --quiet
+docker compose build agent-runtime
+```
 
-That is reasonable for this use case and much simpler than building full inventory accounting.
+## Access Model
 
-## Access model
-
-- Keep the dashboard local to the VM and tunnel it with `ssh -L 18789:127.0.0.1:18789 ubuntu@<ip>`.
+- Keep the Agent Runtime App bound to loopback unless you intentionally add an ingress layer.
 - Keep Postgres internal to Docker only.
 - Put channel secrets outside git.
 - Use allowlists for personal channels when possible.
@@ -193,12 +202,4 @@ That is reasonable for this use case and much simpler than building full invento
 
 `scripts/backup.sh` writes compressed Postgres dumps to `./backup/`.
 
-This is intentionally local-first. Off-host backup to Oracle Object Storage is a good next step, but it is not forced into the initial structure.
-
-## Reasonable next steps
-
-1. Replace placeholder IDs and tokens in `openclaw/config/openclaw.json5`.
-2. Bind the `carshare` agent to the real Telegram group ID.
-3. Test the `carshare` workflow with a few example handovers and refills.
-4. Add off-host backups after the stack is stable.
-5. Add Tailscale when you want cleaner remote access than SSH tunneling.
+Off-host backup to Oracle Object Storage is a reasonable later step, but it is not forced into the starter stack.

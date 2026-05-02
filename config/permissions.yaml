@@ -1,0 +1,11 @@
+permission_classes:
+  none:
+    description: No side effects.
+  writes_domain_data:
+    description: Writes structured domain data to an approved store.
+
+defaults:
+  allow_shell: false
+  allow_network: true
+  allow_github_writes: false
+  allow_implicit_long_term_memory: false

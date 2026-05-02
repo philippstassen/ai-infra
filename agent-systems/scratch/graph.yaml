@@ -1,0 +1,15 @@
+id: scratch-chat
+description: Minimal graph for direct chat testing.
+nodes:
+  receive_message:
+    type: input
+  assistant:
+    type: agent
+    agent: assistant
+  send_response:
+    type: output
+edges:
+  - from: receive_message
+    to: assistant
+  - from: assistant
+    to: send_response

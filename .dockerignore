@@ -1,0 +1,10 @@
+.git
+.env
+backup
+**/node_modules
+architecture/.structurizr
+architecture/workspace.json
+infra/.terraform
+openclaw
+*.tfstate
+*.tfstate.*

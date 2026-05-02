@@ -1,0 +1,16 @@
+models:
+  aliases:
+    bedrock-kimi:
+      provider: bedrock
+      model: moonshotai.kimi-k2.5
+    bedrock-glm:
+      provider: bedrock
+      model: zai.glm-5
+    bedrock-claude-fast:
+      provider: bedrock
+      model: eu.anthropic.claude-haiku-4-5-20251001-v1:0
+  fallback_policy:
+    default:
+      - bedrock-kimi
+      - bedrock-glm
+      - bedrock-claude-fast

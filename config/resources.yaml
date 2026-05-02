@@ -1,0 +1,4 @@
+resources:
+  carshare_project:shared-car:
+    type: carshare_project
+    project_id: shared-car
