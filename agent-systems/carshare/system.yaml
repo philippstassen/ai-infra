@@ -1,6 +1,6 @@
 id: carshare
 name: Carshare Ledger
-description: Shared-car fuel ledger workflow for one bound chat.
+description: Shared-car fuel ledger workflow hosted by one Carshare Persistence Agent.
 default_model: bedrock-kimi
 entry_graph: graph.yaml
 session_scope: chat
@@ -9,9 +9,28 @@ memory_policy:
 permissions:
   tools:
     - carshare.ensure_project
-    - carshare.record_handover
-    - carshare.record_refill
-    - carshare.summary
-    - carshare.events
+    - carshare.list_users
+    - carshare.add_user
+    - carshare.edit_user
+    - carshare.delete_user
+    - carshare.create_driver_interval
+    - carshare.list_driver_intervals
+    - carshare.edit_driver_interval
+    - carshare.delete_driver_interval
+    - carshare.list_obligations
+    - carshare.add_obligation
+    - carshare.edit_obligation
+    - carshare.remove_obligation
+    - carshare.fill_obligation
+    - carshare.add_refill
+    - carshare.list_refills
+    - carshare.edit_refill
+    - carshare.delete_refill
+    - carshare.list_ledger_bookings
+    - carshare.create_settlement
+    - carshare.list_settlements
+    - carshare.list_handover_fuel_deltas
+    - carshare.accept_handover_fuel_delta
+    - carshare.fill_handover_fuel_delta
   resources:
     - carshare_project:shared-car

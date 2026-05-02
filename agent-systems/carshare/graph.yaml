@@ -1,70 +1,16 @@
 id: carshare-ledger
-description: Parse shared-car messages, ask for clarification when needed, and store durable facts in the ledger.
+description: Route carshare messages to one goal-directed persistence agent that gathers required data, calls Carshare Service tools, and reads back results.
 nodes:
   receive_message:
     type: input
-  classify_intent:
+  carshare_persistence:
     type: agent
-    agent: parser
-  parse_handover:
-    type: agent
-    agent: parser
-  parse_refill:
-    type: agent
-    agent: parser
-  query_ledger:
-    type: tool
-    tool: carshare.summary
-    permission_class: none
-  validate_record:
-    type: function
-  ask_clarification:
-    type: output
-  record_handover:
-    type: tool
-    tool: carshare.record_handover
-    permission_class: writes_domain_data
-    idempotency_key: "${message.provider}:${message.id}:carshare:handover"
-  record_refill:
-    type: tool
-    tool: carshare.record_refill
-    permission_class: writes_domain_data
-    idempotency_key: "${message.provider}:${message.id}:carshare:refill"
-  compose_reply:
-    type: agent
-    agent: responder
+    agent: carshare_persistence
+    skill: carshare-agent-skill
   send_response:
     type: output
 edges:
   - from: receive_message
-    to: classify_intent
-  - from: classify_intent
-    to: parse_handover
-    when: intent == "handover"
-  - from: classify_intent
-    to: parse_refill
-    when: intent == "refill"
-  - from: classify_intent
-    to: query_ledger
-    when: intent == "question"
-  - from: parse_handover
-    to: validate_record
-  - from: parse_refill
-    to: validate_record
-  - from: validate_record
-    to: ask_clarification
-    when: record_is_ambiguous
-  - from: validate_record
-    to: record_handover
-    when: record_is_valid && intent == "handover"
-  - from: validate_record
-    to: record_refill
-    when: record_is_valid && intent == "refill"
-  - from: query_ledger
-    to: compose_reply
-  - from: record_handover
-    to: compose_reply
-  - from: record_refill
-    to: compose_reply
-  - from: compose_reply
+    to: carshare_persistence
+  - from: carshare_persistence
     to: send_response

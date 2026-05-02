@@ -29,6 +29,7 @@ Agent graph definitions should remain easy to version and change without inventi
 
 Related:
 - ADR-0001
+- ADR-0005
 
 ## AR-003 Risky Writes Require Future Approval Design
 
@@ -89,3 +90,53 @@ The initial provider set is Bedrock-only, so a gateway would add deployment and 
 
 Related:
 - ADR-0002
+
+## AR-007 Agent Naming Discipline
+
+Status: Accepted
+Type: Architecture
+Applies To: Agent Runtime App, graph configuration, C4 component names, contracts
+
+Statement:
+Components and configuration nodes must not be named `Agent` unless they execute a goal-directed LLM/tool loop that can inspect state, decide next actions, call tools, observe results, ask clarifying questions, and continue until complete or blocked. One-shot model calls must be named LLM Call or Prompt Step; deterministic logic must be named Function or Step.
+
+Rationale:
+Clear naming prevents parser, composer, and other one-shot graph nodes from being mistaken for true agents and keeps diagrams, contracts, and runtime implementation expectations aligned.
+
+Related:
+- ADR-0005
+- Structurizr: `agent-runtime-app-components`, `carshare-agent-graph`
+
+## AR-008 DeepAgents Tool Boundary and Feature Controls
+
+Status: Accepted
+Type: Architecture
+Applies To: Agent Runtime App, Goal-Directed Agent Harness, DeepAgents agents, tool integrations
+
+Statement:
+DeepAgents agents must run inside Agent Runtime App controls: tools are runtime-wrapped, tool permission, idempotency, and invocation audit are enforced outside or around DeepAgents calls, Carshare domain writes go through Tool Client Layer and Carshare Service HTTP APIs rather than direct database access, and DeepAgents filesystem, implicit durable memory, subagents, and approval/resume features stay disabled unless an ADR and configuration explicitly enable them.
+
+Rationale:
+DeepAgents provides the agent loop, but runtime-owned safety boundaries preserve data ownership, auditability, idempotent writes, and the starter scope limits on memory and approval workflows.
+
+Related:
+- ADR-0006
+- ADR-0003
+- ADR-0004
+- Structurizr: `agentHarness`, `toolClientLayer`, `permissionPolicy`
+
+## AR-009 Resettable Carshare Domain Persistence
+
+Status: Accepted
+Type: Architecture
+Applies To: Carshare Service, Carshare domain schema
+
+Statement:
+Carshare domain persistence is resettable and may be changed through the baseline init schema only while there is no production legacy data-retention requirement; do not add Carshare compatibility adapters or migration layers without a future data-retention decision.
+
+Rationale:
+The project can wipe the Carshare database and restart from the replacement-obligation schema, so compatibility and migration layers would add unnecessary complexity until production retention is required.
+
+Related:
+- ADR-0004
+- Structurizr: `carshareService`, `carshare-service-components`

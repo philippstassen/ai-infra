@@ -8,7 +8,7 @@ const testDir = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(testDir, '../..');
 const allowedTopLevelFields = new Set(['id', 'description', 'nodes', 'edges', 'schema', 'version', 'entrypoint', 'state']);
 const requiredTopLevelFields = ['id', 'description', 'nodes', 'edges'];
-const allowedNodeTypes = new Set(['input', 'agent', 'function', 'tool', 'output']);
+const allowedNodeTypes = new Set(['input', 'agent', 'llm_call', 'function', 'tool', 'output']);
 const namedBoolean = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const equalityCheck = /^[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*\s*==\s*"[^"]+"$/;
 
@@ -60,6 +60,12 @@ describe('agent graph schema v1 fitness', () => {
         assert(allowedNodeTypes.has(node.type), `${nodeId} uses unsupported type ${node.type}`);
         assert.notEqual(node.type, 'human_approval', `${nodeId} must not use future approval node types`);
         if (node.type === 'agent') assert.equal(typeof node.agent, 'string', `${nodeId} agent nodes require agent`);
+        if (node.type === 'llm_call') {
+          assert(
+            typeof node.prompt === 'string' || typeof node.model === 'string' || (node.prompt && typeof node.prompt === 'object') || (node.model && typeof node.model === 'object'),
+            `${nodeId} llm_call nodes require prompt or model configuration`,
+          );
+        }
         if (node.type === 'tool') {
           assert.equal(typeof node.tool, 'string', `${nodeId} tool nodes require tool`);
           assert(declaredToolIds.has(node.tool), `${nodeId} references undeclared tool id ${node.tool}`);
@@ -91,6 +97,25 @@ describe('agent graph schema v1 fitness', () => {
         assert.equal(node.permission_class, 'writes_domain_data', `${nodeId} must use writes_domain_data`);
         assert.equal(typeof node.idempotency_key, 'string', `${nodeId} write tool must be idempotent`);
       }
+    }
+  });
+
+  it('carshare graph routes through exactly one Carshare Persistence Agent', () => {
+    const graph = readYaml(resolve(repoRoot, 'agent-systems/carshare/graph.yaml'));
+    const agentEntries = Object.entries(graph.nodes).filter(([, node]) => node.type === 'agent');
+
+    assert.equal(agentEntries.length, 1, 'carshare graph must have exactly one true agent node');
+
+    const [[nodeId, agentNode]] = agentEntries;
+    assert.equal(nodeId, 'carshare_persistence');
+    assert.equal(agentNode.agent, 'carshare_persistence');
+    assert.equal(typeof agentNode.skill, 'string', 'carshare persistence agent requires a skill reference');
+
+    const pseudoAgentNames = new Set(['parser', 'responder']);
+    for (const [id, node] of Object.entries(graph.nodes)) {
+      assert.notEqual(node.agent, 'parser', `${id} must not be a pseudo-agent parser node`);
+      assert.notEqual(node.agent, 'responder', `${id} must not be a pseudo-agent responder node`);
+      assert(!pseudoAgentNames.has(id), `${id} must not be modeled as a pseudo-agent node`);
     }
   });
 });

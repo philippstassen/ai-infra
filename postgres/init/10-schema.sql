@@ -29,25 +29,114 @@ CREATE TABLE IF NOT EXISTS carshare.projects (
   updated_at                timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE TABLE IF NOT EXISTS carshare.events (
-  id                bigserial PRIMARY KEY,
-  project_slug      text NOT NULL REFERENCES carshare.projects(slug) ON DELETE CASCADE,
-  kind              text NOT NULL CHECK (kind IN ('handover', 'refill')),
-  occurred_at       timestamptz NOT NULL,
-  holder            text,
-  payer             text,
-  liters_remaining  numeric(12,3),
-  liters_added      numeric(12,3),
-  total_cost        numeric(12,2),
-  price_per_liter   numeric(12,4),
-  recorded_by       text,
-  note              text,
-  raw_text          text,
-  created_at        timestamptz NOT NULL DEFAULT now()
+CREATE TABLE IF NOT EXISTS carshare.users (
+  id              bigserial PRIMARY KEY,
+  project_slug    text NOT NULL REFERENCES carshare.projects(slug) ON DELETE CASCADE,
+  name            text NOT NULL,
+  canonical_name  text NOT NULL,
+  active          boolean NOT NULL DEFAULT true,
+  created_at      timestamptz NOT NULL DEFAULT now(),
+  updated_at      timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (project_slug, canonical_name)
 );
 
-CREATE INDEX IF NOT EXISTS carshare_events_project_occurred_idx
-  ON carshare.events (project_slug, occurred_at, id);
+CREATE TABLE IF NOT EXISTS carshare.driver_intervals (
+  id            bigserial PRIMARY KEY,
+  project_slug  text NOT NULL REFERENCES carshare.projects(slug) ON DELETE CASCADE,
+  user_id       bigint NOT NULL REFERENCES carshare.users(id),
+  started_at    timestamptz NOT NULL,
+  start_liters  numeric(12,3) NOT NULL CHECK (start_liters >= 0),
+  end_liters    numeric(12,3) CHECK (end_liters >= 0),
+  created_at    timestamptz NOT NULL DEFAULT now(),
+  updated_at    timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS carshare_driver_intervals_project_started_idx
+  ON carshare.driver_intervals (project_slug, started_at, id);
+
+CREATE TABLE IF NOT EXISTS carshare.obligations (
+  id            bigserial PRIMARY KEY,
+  project_slug  text NOT NULL REFERENCES carshare.projects(slug) ON DELETE CASCADE,
+  user_id       bigint NOT NULL REFERENCES carshare.users(id),
+  interval_id   bigint REFERENCES carshare.driver_intervals(id) ON DELETE CASCADE,
+  liters_total  numeric(12,3) NOT NULL CHECK (liters_total > 0),
+  liters_open   numeric(12,3) NOT NULL CHECK (liters_open >= 0),
+  occurred_at   timestamptz NOT NULL,
+  source        text NOT NULL CHECK (source IN ('interval', 'manual')),
+  reason        text,
+  created_at    timestamptz NOT NULL DEFAULT now(),
+  updated_at    timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS carshare_obligations_project_occurred_idx
+  ON carshare.obligations (project_slug, occurred_at, id);
+
+CREATE TABLE IF NOT EXISTS carshare.refills (
+  id                bigserial PRIMARY KEY,
+  project_slug      text NOT NULL REFERENCES carshare.projects(slug) ON DELETE CASCADE,
+  interval_id       bigint NOT NULL REFERENCES carshare.driver_intervals(id) ON DELETE CASCADE,
+  paid_by_user_id   bigint NOT NULL REFERENCES carshare.users(id),
+  liters            numeric(12,3) NOT NULL CHECK (liters > 0),
+  price_per_liter   numeric(12,4) NOT NULL CHECK (price_per_liter > 0),
+  total_cost        numeric(12,2) NOT NULL CHECK (total_cost >= 0),
+  occurred_at       timestamptz NOT NULL,
+  created_at        timestamptz NOT NULL DEFAULT now(),
+  updated_at        timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS carshare_refills_project_occurred_idx
+  ON carshare.refills (project_slug, occurred_at, id);
+
+CREATE TABLE IF NOT EXISTS carshare.handover_fuel_deltas (
+  id                   bigserial PRIMARY KEY,
+  project_slug         text NOT NULL REFERENCES carshare.projects(slug) ON DELETE CASCADE,
+  interval_before_id   bigint NOT NULL REFERENCES carshare.driver_intervals(id) ON DELETE CASCADE,
+  interval_after_id    bigint NOT NULL REFERENCES carshare.driver_intervals(id) ON DELETE CASCADE,
+  amount_liters        numeric(12,3) NOT NULL,
+  abs_liters           numeric(12,3) NOT NULL CHECK (abs_liters > 0),
+  filled_liters        numeric(12,3) NOT NULL DEFAULT 0 CHECK (filled_liters >= 0),
+  status               text NOT NULL CHECK (status IN ('pending', 'accepted', 'filled')),
+  auto_accepted        boolean NOT NULL DEFAULT false,
+  accepted_at          timestamptz,
+  filled_at            timestamptz,
+  reason               text,
+  created_at           timestamptz NOT NULL DEFAULT now(),
+  updated_at           timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (project_slug, interval_before_id, interval_after_id)
+);
+
+CREATE INDEX IF NOT EXISTS carshare_handover_fuel_deltas_project_status_idx
+  ON carshare.handover_fuel_deltas (project_slug, status, updated_at, id);
+
+CREATE INDEX IF NOT EXISTS carshare_handover_fuel_deltas_before_after_idx
+  ON carshare.handover_fuel_deltas (interval_before_id, interval_after_id);
+
+CREATE TABLE IF NOT EXISTS carshare.settlements (
+  id            bigserial PRIMARY KEY,
+  project_slug  text NOT NULL REFERENCES carshare.projects(slug) ON DELETE CASCADE,
+  occurred_at   timestamptz NOT NULL DEFAULT now(),
+  note          text,
+  created_at    timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS carshare.ledger_bookings (
+  id                 bigserial PRIMARY KEY,
+  project_slug       text NOT NULL REFERENCES carshare.projects(slug) ON DELETE CASCADE,
+  debit_user_id      bigint NOT NULL REFERENCES carshare.users(id),
+  credit_user_id     bigint NOT NULL REFERENCES carshare.users(id),
+  obligation_id      bigint REFERENCES carshare.obligations(id) ON DELETE CASCADE,
+  handover_fuel_delta_id bigint REFERENCES carshare.handover_fuel_deltas(id) ON DELETE CASCADE,
+  refill_id          bigint REFERENCES carshare.refills(id) ON DELETE SET NULL,
+  liters             numeric(12,3) NOT NULL CHECK (liters > 0),
+  price_per_liter    numeric(12,4) NOT NULL CHECK (price_per_liter > 0),
+  amount             numeric(12,2) NOT NULL CHECK (amount >= 0),
+  settlement_id      bigint REFERENCES carshare.settlements(id) ON DELETE SET NULL,
+  occurred_at        timestamptz NOT NULL DEFAULT now(),
+  created_at         timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS carshare_ledger_bookings_project_status_idx
+  ON carshare.ledger_bookings (project_slug, settlement_id, occurred_at, id);
 
 CREATE TABLE IF NOT EXISTS runtime.channel_bindings (
   id                 uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -159,12 +248,12 @@ GRANT SELECT ON TABLE shared.kv_store TO role_readonly;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE carshare.projects TO role_tooling;
 GRANT SELECT ON TABLE carshare.projects TO role_readonly;
 
-GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE carshare.events TO role_tooling;
-GRANT SELECT ON TABLE carshare.events TO role_readonly;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA carshare TO role_tooling;
+GRANT SELECT ON ALL TABLES IN SCHEMA carshare TO role_readonly;
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA runtime TO role_runtime;
 
-GRANT USAGE, SELECT ON SEQUENCE carshare.events_id_seq TO role_tooling;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA carshare TO role_tooling;
 
 ALTER DEFAULT PRIVILEGES IN SCHEMA shared
   GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO role_tooling;

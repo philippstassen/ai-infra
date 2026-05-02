@@ -1,16 +1,73 @@
 tools:
   - id: carshare.ensure_project
-    description: Ensure the shared-car project exists before recording events.
+    description: Ensure the shared-car project exists.
     side_effects: writes_domain_data
-  - id: carshare.record_handover
-    description: Record a handover with holder and remaining liters.
-    side_effects: writes_domain_data
-  - id: carshare.record_refill
-    description: Record a refill with payer, liters, and total cost.
-    side_effects: writes_domain_data
-  - id: carshare.summary
-    description: Read current fuel ledger summary.
+  - id: carshare.list_users
+    description: List project participants.
     side_effects: none
-  - id: carshare.events
-    description: Read recent carshare ledger events.
+  - id: carshare.add_user
+    description: Add a project participant.
+    side_effects: writes_domain_data
+  - id: carshare.edit_user
+    description: Edit a project participant.
+    side_effects: writes_domain_data
+  - id: carshare.delete_user
+    description: Delete a participant when domain constraints allow it.
+    side_effects: writes_domain_data
+  - id: carshare.create_driver_interval
+    description: Create a driver interval with starting tank liters.
+    side_effects: writes_domain_data
+  - id: carshare.list_driver_intervals
+    description: List driver intervals.
     side_effects: none
+  - id: carshare.edit_driver_interval
+    description: Edit a driver interval.
+    side_effects: writes_domain_data
+  - id: carshare.delete_driver_interval
+    description: Delete a driver interval when consistency permits it.
+    side_effects: writes_domain_data
+  - id: carshare.list_obligations
+    description: List liter obligations.
+    side_effects: none
+  - id: carshare.add_obligation
+    description: Add a manual liter obligation.
+    side_effects: writes_domain_data
+  - id: carshare.edit_obligation
+    description: Edit a manual liter obligation.
+    side_effects: writes_domain_data
+  - id: carshare.remove_obligation
+    description: Remove a manual liter obligation.
+    side_effects: writes_domain_data
+  - id: carshare.fill_obligation
+    description: Fill an obligation with priced replacement fuel.
+    side_effects: writes_domain_data
+  - id: carshare.add_refill
+    description: Add a priced refill lot to a driver interval.
+    side_effects: writes_domain_data
+  - id: carshare.list_refills
+    description: List priced refill lots.
+    side_effects: none
+  - id: carshare.edit_refill
+    description: Edit a priced refill lot.
+    side_effects: writes_domain_data
+  - id: carshare.delete_refill
+    description: Delete a refill when consistency permits it.
+    side_effects: writes_domain_data
+  - id: carshare.list_ledger_bookings
+    description: List monetary ledger bookings.
+    side_effects: none
+  - id: carshare.create_settlement
+    description: Create a settlement for unsettled ledger bookings.
+    side_effects: writes_domain_data
+  - id: carshare.list_settlements
+    description: List recent settlements.
+    side_effects: none
+  - id: carshare.list_handover_fuel_deltas
+    description: List handover fuel deltas by status.
+    side_effects: none
+  - id: carshare.accept_handover_fuel_delta
+    description: Accept a pending handover fuel delta.
+    side_effects: writes_domain_data
+  - id: carshare.fill_handover_fuel_delta
+    description: Fill an accepted handover fuel delta with priced fuel and split responsibility between adjacent users.
+    side_effects: writes_domain_data

@@ -9,9 +9,12 @@
   },
   "dependencies": {
     "@aws-sdk/client-bedrock-runtime": "^3.808.0",
+    "@langchain/anthropic": "^1.1.5",
     "@langchain/core": "^1.1.43",
     "@langchain/langgraph": "^1.2.9",
+    "deepagents": "^1.9.0",
     "js-yaml": "^4.1.0",
-    "pg": "^8.15.6"
+    "pg": "^8.15.6",
+    "zod": "^4.3.6"
   }
 }

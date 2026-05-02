@@ -56,6 +56,21 @@ function sqlFiles() {
 }
 
 describe('runtime architecture fitness', () => {
+  it('type agent graph nodes are routed through the DeepAgents harness boundary', () => {
+    const packageJson = JSON.parse(readFileSync(resolve(repoRoot, 'runtime/package.json'), 'utf8'));
+    const graphRunner = readFileSync(resolve(runtimeSourceRoot, 'langgraph/graph-runner.js'), 'utf8');
+    const harness = readFileSync(resolve(runtimeSourceRoot, 'agents/deepagents-harness.js'), 'utf8');
+
+    assert(packageJson.dependencies.deepagents, 'runtime must depend on DeepAgents for type: agent nodes');
+    assert.match(graphRunner, /runDeepAgentNode/);
+    assert.match(harness, /import\('deepagents'\)/);
+    assert.match(harness, /enforceToolPermission/);
+    assert.match(harness, /recordToolInvocation/);
+    assert.match(harness, /checkpointer:\s*false/);
+    assert.match(harness, /subagents:\s*\[\]/);
+    assert.match(harness, /memory:\s*\[\]/);
+  });
+
   it('runtime source and SQL migrations do not introduce out-of-scope write, approval, checkpoint, artifact, or knowledge paths', () => {
     const runtimeCodeFiles = filesUnder(runtimeSourceRoot, (path) => ['.js', '.mjs', '.cjs', '.ts', '.mts', '.cts'].includes(extname(path)));
     const configFiles = filesUnder(resolve(repoRoot, 'agent-systems'), (path) => ['.yaml', '.yml'].includes(extname(path)));

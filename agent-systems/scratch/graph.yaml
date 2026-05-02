@@ -4,8 +4,8 @@ nodes:
   receive_message:
     type: input
   assistant:
-    type: agent
-    agent: assistant
+    type: llm_call
+    prompt: assistant
   send_response:
     type: output
 edges:
